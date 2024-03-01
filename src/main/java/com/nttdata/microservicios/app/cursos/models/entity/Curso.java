@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.nttdata.microservicios.commons.alumnos.models.entity.Alumno;
 import com.nttdata.microservicios.commons.examenes.models.entity.Examen;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -19,6 +21,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
+import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotEmpty;
 
 @Entity
@@ -33,7 +36,11 @@ public class Curso {
 	@Column(name="create_at")
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date createAt;
-	@OneToMany(fetch = FetchType.LAZY)
+	@JsonIgnoreProperties(value= {"curso"}, allowSetters = true)
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "curso", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<CursoAlumno> cursoAlumnos;
+	// @OneToMany(fetch = FetchType.LAZY)
+	@Transient
 	private List<Alumno> alumnos;
 	@ManyToMany(fetch = FetchType.LAZY)
 	public List<Examen> examenes;
@@ -41,6 +48,7 @@ public class Curso {
 	public Curso() {
 		this.alumnos = new ArrayList<>();
 		this.examenes = new ArrayList<>();
+		this.cursoAlumnos = new ArrayList<>();
 	}
 	
 
@@ -98,6 +106,21 @@ public class Curso {
 	public void setCreateAt(Date createAt) {
 		this.createAt = createAt;
 	}
-	
+
+
+	public List<CursoAlumno> getCursoAlumnos() {
+		return cursoAlumnos;
+	}
+
+
+	public void setCursoAlumnos(List<CursoAlumno> cursoAlumnos) {
+		this.cursoAlumnos = cursoAlumnos;
+	}
+	public void addCursoAlumno(CursoAlumno cursoAlumno) {
+		this.cursoAlumnos.add(cursoAlumno);
+	}
+	public void removeCursoAlumno(CursoAlumno cursoAlumno) {
+		this.cursoAlumnos.remove(cursoAlumno);
+	}
 	
 }

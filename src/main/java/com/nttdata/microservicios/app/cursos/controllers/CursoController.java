@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.nttdata.microservicios.app.cursos.models.entity.Curso;
+import com.nttdata.microservicios.app.cursos.models.entity.CursoAlumno;
 import com.nttdata.microservicios.app.cursos.services.CursoService;
 import com.nttdata.microservicios.commons.alumnos.models.entity.Alumno;
 import com.nttdata.microservicios.commons.controllers.CommonController;
@@ -60,7 +61,12 @@ public class CursoController extends CommonController<Curso, CursoService> {
 		}
 		Curso dbCurso = o.get();
 		
-		alumnos.forEach(dbCurso::addAlumno);
+		alumnos.forEach(a -> {
+			CursoAlumno cursoAlumno = new CursoAlumno();
+			cursoAlumno.setAlumnoId(a.getId());
+			cursoAlumno.setCurso(dbCurso);
+			dbCurso.addCursoAlumno(cursoAlumno);
+		});
 		return ResponseEntity.status(HttpStatus.CREATED).body(this.service.save(dbCurso));
 	}
 	@PutMapping("/{id}/eliminar-alumno")
@@ -70,7 +76,9 @@ public class CursoController extends CommonController<Curso, CursoService> {
 			return ResponseEntity.notFound().build();
 		}
 		Curso dbCurso = o.get();
-		dbCurso.removeAlumno(alumno);
+		CursoAlumno cursoAlumno = new CursoAlumno();
+		cursoAlumno.setAlumnoId(alumno.getId());
+		dbCurso.removeCursoAlumno(cursoAlumno);
 		return ResponseEntity.status(HttpStatus.CREATED).body(this.service.save(dbCurso));
 	}
 	@PutMapping("/{id}/asignar-examenes")
