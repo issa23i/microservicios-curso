@@ -1,9 +1,12 @@
 package com.nttdata.microservicios.app.cursos.controllers;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -23,6 +26,17 @@ import jakarta.validation.Valid;
 
 @RestController
 public class CursoController extends CommonController<Curso, CursoService> {
+
+	@Value("${config.balanceador.test}")
+	private String balanceadorTest;
+	
+	@GetMapping("/balanceador-test")
+	public ResponseEntity<?> balanceadorTest() {
+		Map<String, Object> response = new HashMap<String, Object>();
+		response.put("balanceador", balanceadorTest);
+		response.put("cursos", service.findAll());
+		return ResponseEntity.ok(response);
+	}
 
 	@PutMapping("/{id}")
 	public ResponseEntity<?> editar(@Valid @RequestBody Curso curso, BindingResult result, @PathVariable Long id) {
