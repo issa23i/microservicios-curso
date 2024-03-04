@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -30,7 +32,21 @@ public class CursoController extends CommonController<Curso, CursoService> {
 
 	@Value("${config.balanceador.test}")
 	private String balanceadorTest;
-	
+
+	@Override
+	@GetMapping("/pagina")
+	public ResponseEntity<?> listar(Pageable pageable) {
+		Page<Curso> cursos = service.findAll(pageable).map(curso -> {
+			curso.getCursoAlumnos().forEach(ca -> {
+				Alumno alumno = new Alumno();
+				alumno.setId(ca.getAlumnoId());
+				curso.addAlumno(alumno);
+			});
+			return curso;
+		});
+		return ResponseEntity.ok().body(cursos);
+	}
+
 	@GetMapping("/balanceador-test")
 	public ResponseEntity<?> balanceadorTest() {
 		Map<String, Object> response = new HashMap<String, Object>();
@@ -38,10 +54,10 @@ public class CursoController extends CommonController<Curso, CursoService> {
 		response.put("cursos", service.findAll());
 		return ResponseEntity.ok(response);
 	}
-	
+
 	@Override
 	@GetMapping
-	public ResponseEntity<?> listar(){
+	public ResponseEntity<?> listar() {
 		List<Curso> cursos = ((List<Curso>) service.findAll()).stream().map(c -> {
 			c.getCursoAlumnos().forEach(ca -> {
 				Alumno alumno = new Alumno();
@@ -50,32 +66,51 @@ public class CursoController extends CommonController<Curso, CursoService> {
 			});
 			return c;
 		}).collect(Collectors.toList());
-		
+
 		return ResponseEntity.ok().body(cursos);
+	}
+
+	@GetMapping("/{id}")
+	@Override
+	public ResponseEntity<?> ver(@PathVariable Long id) {
+		Optional<Curso> o = service.findById(id);
+		if (o.isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		Curso curso = o.get();
+		if (!curso.getCursoAlumnos().isEmpty()) {
+			List<Long> ids = curso.getCursoAlumnos().stream().map(ca -> ca.getAlumnoId()).collect(Collectors.toList());
+
+			List<Alumno> alumnos = (List<Alumno>) service.obtenerAlumnnosPorCurso(ids);
+
+			curso.setAlumnos(alumnos);
+		}
+
+		return ResponseEntity.ok().body(curso);
 	}
 
 	@PutMapping("/{id}")
 	public ResponseEntity<?> editar(@Valid @RequestBody Curso curso, BindingResult result, @PathVariable Long id) {
-		if(result.hasErrors()) {
+		if (result.hasErrors()) {
 			return this.validar(result);
 		}
 		Optional<Curso> o = this.service.findById(id);
-		if(o.isEmpty()) {
+		if (o.isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
 		Curso dbCurso = o.get();
 		dbCurso.setNombre(curso.getNombre());
 		return ResponseEntity.status(HttpStatus.CREATED).body(this.service.save(dbCurso));
 	}
-	
+
 	@PutMapping("/{id}/asignar-alumnos")
-	public ResponseEntity<?> asignarAlumnos(@RequestBody List<Alumno> alumnos, @PathVariable Long id){
+	public ResponseEntity<?> asignarAlumnos(@RequestBody List<Alumno> alumnos, @PathVariable Long id) {
 		Optional<Curso> o = this.service.findById(id);
-		if(o.isEmpty()) {
+		if (o.isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
 		Curso dbCurso = o.get();
-		
+
 		alumnos.forEach(a -> {
 			CursoAlumno cursoAlumno = new CursoAlumno();
 			cursoAlumno.setAlumnoId(a.getId());
@@ -84,10 +119,11 @@ public class CursoController extends CommonController<Curso, CursoService> {
 		});
 		return ResponseEntity.status(HttpStatus.CREATED).body(this.service.save(dbCurso));
 	}
+
 	@PutMapping("/{id}/eliminar-alumno")
-	public ResponseEntity<?> eliminarAlumno(@RequestBody Alumno alumno, @PathVariable Long id){
+	public ResponseEntity<?> eliminarAlumno(@RequestBody Alumno alumno, @PathVariable Long id) {
 		Optional<Curso> o = this.service.findById(id);
-		if(o.isEmpty()) {
+		if (o.isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
 		Curso dbCurso = o.get();
@@ -96,36 +132,39 @@ public class CursoController extends CommonController<Curso, CursoService> {
 		dbCurso.removeCursoAlumno(cursoAlumno);
 		return ResponseEntity.status(HttpStatus.CREATED).body(this.service.save(dbCurso));
 	}
+
 	@PutMapping("/{id}/asignar-examenes")
-	public ResponseEntity<?> asignarExamenes(@RequestBody List<Examen> examenes, @PathVariable Long id){
+	public ResponseEntity<?> asignarExamenes(@RequestBody List<Examen> examenes, @PathVariable Long id) {
 		Optional<Curso> o = this.service.findById(id);
-		if(o.isEmpty()) {
+		if (o.isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
 		Curso dbCurso = o.get();
-		
+
 		examenes.forEach(dbCurso::addExamenes);
 		return ResponseEntity.status(HttpStatus.CREATED).body(this.service.save(dbCurso));
 	}
+
 	@PutMapping("/{id}/eliminar-examen")
-	public ResponseEntity<?> eliminarExamen(@RequestBody Examen examen, @PathVariable Long id){
+	public ResponseEntity<?> eliminarExamen(@RequestBody Examen examen, @PathVariable Long id) {
 		Optional<Curso> o = this.service.findById(id);
-		if(o.isEmpty()) {
+		if (o.isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
 		Curso dbCurso = o.get();
 		dbCurso.removeExamen(examen);
 		return ResponseEntity.status(HttpStatus.CREATED).body(this.service.save(dbCurso));
 	}
+
 	@GetMapping("/alumno/{id}")
-	public ResponseEntity<?> buscarPorAlumnoId(@PathVariable Long id){
+	public ResponseEntity<?> buscarPorAlumnoId(@PathVariable Long id) {
 		Curso curso = service.findCursoByAlumnoId(id);
-		
-		if(curso != null) {
+
+		if (curso != null) {
 			List<Long> examenesIds = (List<Long>) service.obtenerExamenesIdconRespuestasAlumnoId(id);
-			
+
 			List<Examen> examenes = curso.getExamenes().stream().map(examen -> {
-				if(examenesIds.contains(examen.getId())) {
+				if (examenesIds.contains(examen.getId())) {
 					examen.setRespondido(true);
 				}
 				return examen;
