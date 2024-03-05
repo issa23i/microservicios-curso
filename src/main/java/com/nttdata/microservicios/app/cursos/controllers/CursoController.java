@@ -164,21 +164,24 @@ public class CursoController extends CommonController<Curso, CursoService> {
 		if (curso != null) {
 			List<Long> examenesIds = (List<Long>) service.obtenerExamenesIdconRespuestasAlumnoId(id);
 
-			List<Examen> examenes = curso.getExamenes().stream().map(examen -> {
-				if (examenesIds.contains(examen.getId())) {
-					examen.setRespondido(true);
-				}
-				return examen;
-			}).collect(Collectors.toList());
-			curso.setExamenes(examenes);
+			if (examenesIds != null && examenesIds.size() > 0) {
+
+				List<Examen> examenes = curso.getExamenes().stream().map(examen -> {
+					if (examenesIds.contains(examen.getId())) {
+						examen.setRespondido(true);
+					}
+					return examen;
+				}).collect(Collectors.toList());
+				curso.setExamenes(examenes);
+			}
 		}
 		return ResponseEntity.ok(curso);
 	}
-	
+
 	@DeleteMapping("/eliminar-alumno/{id}")
 	public ResponseEntity<?> eliminarCursoAlumnoPorId(@PathVariable Long id) {
 		service.eliminarCursoAlumnoPorId(id);
 		return ResponseEntity.noContent().build();
 	}
-	
+
 }
